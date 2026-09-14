@@ -31,6 +31,9 @@ struct Cli {
     #[arg(long, help = "Rebuild the llmc container image and exit")]
     build: bool,
 
+    #[arg(long, help = "Launch a shell in the LLMC container")]
+    shell: bool,
+
     #[arg(short, long, value_name = "FILE", help = "Path to llmc TOML config")]
     config: Option<PathBuf>,
 
@@ -111,6 +114,10 @@ fn main() -> Result<()> {
         return build_image(&config);
     }
 
+    if cli.shell {
+        return run_shell(&cli, &config, &home);
+    }
+
     run_container(&cli, &config, &home)
 }
 
@@ -189,6 +196,51 @@ fn run_container(cli: &Cli, config: &Config, home: &Path) -> Result<()> {
         .arg(workdir)
         .arg(&config.image)
         .arg("opencode");
+
+    let status = command.status().context("failed to run podman")?;
+
+    if !status.success() {
+        bail!("podman run failed");
+    }
+
+    Ok(())
+}
+
+fn run_shell(cli: &Cli, config: &Config, home: &Path) -> Result<()> {
+    let mut mounts = config.mounts.clone();
+    for path in &cli.paths {
+        let source = path.canonicalize()?;
+        mounts.insert(Mount {
+            source,
+            target: None,
+            readonly: false,
+        });
+    }
+
+    let workdir = cli
+        .paths
+        .first()
+        .and_then(|path| path.canonicalize().ok())
+        .unwrap_or_else(|| home.to_path_buf());
+
+    let mut command = Command::new("podman");
+    command
+        .arg("run")
+        .arg("-it")
+        .arg("--rm")
+        .arg("--init")
+        .arg("--userns=keep-id");
+    // .arg("keep-id");
+
+    for mount in mounts {
+        command.arg("-v").arg(mount.spec());
+    }
+
+    command
+        .arg("-w")
+        .arg(workdir)
+        .arg(&config.image)
+        .arg("bash");
 
     let status = command.status().context("failed to run podman")?;
 
