@@ -17,7 +17,7 @@ use serde::Deserialize;
 const DEFAULT_IMAGE: &str = "llmc:latest";
 const CONTAINERFILE_SOURCE: &[u8] = include_bytes!("../Containerfile");
 
-const DEFAULT_PACKAGES: &[&str] = &["opencode", "git", "base-devel", "less"];
+const DEFAULT_PACKAGES: &[&str] = &["opencode", "git", "base-devel", "less", "sudo"];
 const DEFAULT_MOUNTS: &[(&str, bool)] = &[
     ("~/.config/opencode", false),
     ("~/.local/share/opencode", false),

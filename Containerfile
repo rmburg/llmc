@@ -16,6 +16,10 @@ RUN groupadd -g ${GID} ${USERNAME} && \
         -s /bin/bash \
         ${USERNAME}
 
+RUN printf '%s ALL=(root) NOPASSWD: /usr/bin/pacman\n' "$USERNAME" > /etc/sudoers.d/allow-pacman && \
+    chmod 0440 /etc/sudoers.d/allow-pacman && \
+    visudo -cf /etc/sudoers.d/allow-pacman
+
 USER ${USERNAME}
 
 RUN if command -v rustup >/dev/null 2>&1; then \
