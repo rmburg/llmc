@@ -259,6 +259,7 @@ fn build_image(config: &Config) -> Result<()> {
     let mut command = Command::new("podman");
     command
         .arg("build")
+        .arg("--no-cache")
         .arg("--file")
         .arg(containerfile.path())
         .arg("--build-arg")
