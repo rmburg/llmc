@@ -14,7 +14,7 @@ use clap::Parser;
 use itertools::Itertools;
 use serde::Deserialize;
 
-const DEFAULT_IMAGE: &str = "llmc:latest";
+const DEFAULT_IMAGE: &str = "localhost/llmc:latest";
 const CONTAINERFILE_SOURCE: &[u8] = include_bytes!("../Containerfile");
 
 const DEFAULT_PACKAGES: &[&str] = &["opencode", "git", "base-devel", "less", "sudo"];
