@@ -71,8 +71,9 @@ struct Config {
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Mount {
-    source: PathBuf,
+    path: PathBuf,
     target: Option<PathBuf>,
+    #[serde(default)]
     readonly: bool,
 }
 
@@ -80,7 +81,7 @@ impl Mount {
     fn new(path: impl Into<PathBuf>, readonly: bool) -> Self {
         let path = path.into();
         Self {
-            source: path,
+            path,
             target: None,
             readonly,
         }
@@ -89,8 +90,8 @@ impl Mount {
     fn spec(&self) -> String {
         let mut spec = format!(
             "{}:{}",
-            self.source.display(),
-            self.target.as_ref().unwrap_or(&self.source).display()
+            self.path.display(),
+            self.target.as_ref().unwrap_or(&self.path).display()
         );
         if self.readonly {
             spec.push_str(":ro");
@@ -166,7 +167,7 @@ fn run_container(cli: &Cli, config: &Config, home: &Path) -> Result<()> {
     for path in &cli.paths {
         let source = path.canonicalize()?;
         mounts.insert(Mount {
-            source,
+            path: source,
             target: None,
             readonly: false,
         });
@@ -211,7 +212,7 @@ fn run_shell(cli: &Cli, config: &Config, home: &Path) -> Result<()> {
     for path in &cli.paths {
         let source = path.canonicalize()?;
         mounts.insert(Mount {
-            source,
+            path: source,
             target: None,
             readonly: false,
         });
