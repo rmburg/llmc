@@ -27,9 +27,4 @@ USER ${USERNAME}
 # inside the container, making them readonly.
 RUN mkdir -p /home/${USERNAME}/{.config,.local/{share,state},.cache}
 
-RUN if command -v rustup >/dev/null 2>&1; then \
-      rustup default stable && \
-      rustup component add rust-analyzer; \
-    fi
-
 ENV PATH=/usr/lib/rustup/bin:$PATH
