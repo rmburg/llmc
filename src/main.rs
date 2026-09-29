@@ -149,7 +149,24 @@ impl Config {
                     })
                     .collect::<Result<Vec<Mount>>>()?,
             );
-            mounts.extend(file.mounts);
+            mounts.extend(
+                file.mounts
+                    .into_iter()
+                    .map(
+                        |Mount {
+                             path,
+                             target,
+                             readonly,
+                         }| {
+                            Ok(Mount {
+                                path: resolve_config_source(&path, base_dir, home)?,
+                                target,
+                                readonly,
+                            })
+                        },
+                    )
+                    .collect::<Result<Vec<_>>>()?,
+            );
 
             mounts
         };
