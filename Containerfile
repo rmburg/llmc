@@ -22,6 +22,11 @@ RUN printf '%s ALL=(root) NOPASSWD: /usr/bin/pacman\n' "$USERNAME" > /etc/sudoer
 
 USER ${USERNAME}
 
+# when mounting anything inside ~/.config/ and friends,
+# missing parent directories are created as owned by root
+# inside the container, making them readonly.
+RUN mkdir -p /home/${USERNAME}/{.config,.local/{share,state},.cache}
+
 RUN if command -v rustup >/dev/null 2>&1; then \
       rustup default stable && \
       rustup component add rust-analyzer; \
