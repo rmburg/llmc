@@ -116,10 +116,10 @@ fn main() -> Result<()> {
     }
 
     if cli.shell {
-        return run_shell(&cli, &config, &home);
+        return run_in_container(&cli, &config, &home, &["bash"]);
     }
 
-    run_container(&cli, &config, &home)
+    run_in_container(&cli, &config, &home, &["opencode"])
 }
 
 impl Config {
@@ -179,7 +179,12 @@ impl Config {
     }
 }
 
-fn run_container(cli: &Cli, config: &Config, home: &Path) -> Result<()> {
+fn run_in_container(
+    cli: &Cli,
+    config: &Config,
+    home: &Path,
+    command_and_args: &[&str],
+) -> Result<()> {
     let mut mounts = config.mounts.clone();
     for path in &cli.paths {
         let source = path.canonicalize()?;
@@ -213,52 +218,7 @@ fn run_container(cli: &Cli, config: &Config, home: &Path) -> Result<()> {
         .arg("-w")
         .arg(workdir)
         .arg(&config.image)
-        .arg("opencode");
-
-    let status = command.status().context("failed to run podman")?;
-
-    if !status.success() {
-        bail!("podman run failed");
-    }
-
-    Ok(())
-}
-
-fn run_shell(cli: &Cli, config: &Config, home: &Path) -> Result<()> {
-    let mut mounts = config.mounts.clone();
-    for path in &cli.paths {
-        let source = path.canonicalize()?;
-        mounts.insert(Mount {
-            path: source,
-            target: None,
-            readonly: false,
-        });
-    }
-
-    let workdir = cli
-        .paths
-        .first()
-        .and_then(|path| path.canonicalize().ok())
-        .unwrap_or_else(|| home.to_path_buf());
-
-    let mut command = Command::new("podman");
-    command
-        .arg("run")
-        .arg("-it")
-        .arg("--rm")
-        .arg("--init")
-        .arg("--userns=keep-id");
-    // .arg("keep-id");
-
-    for mount in mounts {
-        command.arg("-v").arg(mount.spec());
-    }
-
-    command
-        .arg("-w")
-        .arg(workdir)
-        .arg(&config.image)
-        .arg("bash");
+        .args(command_and_args);
 
     let status = command.status().context("failed to run podman")?;
 
