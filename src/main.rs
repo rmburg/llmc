@@ -6,7 +6,7 @@ use std::{
     fs,
     io::Write,
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
 };
 
 use anyhow::{Context, Result, anyhow, bail};
@@ -182,6 +182,7 @@ impl Config {
 fn check_if_podman_is_installed() -> Result<()> {
     Command::new("podman")
         .arg("--version")
+        .stdout(Stdio::null())
         .status()
         .context("Podman is not installed")?;
 
