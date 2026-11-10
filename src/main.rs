@@ -119,7 +119,7 @@ fn main() -> Result<()> {
         return run_in_container(&cli, &config, &home, &["bash"]);
     }
 
-    run_in_container(&cli, &config, &home, &["opencode"])
+    run_in_container(&cli, &config, &home, &["opencode", "--standalone"])
 }
 
 impl Config {
