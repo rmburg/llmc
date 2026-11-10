@@ -9,7 +9,7 @@ use std::{
     process::Command,
 };
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, anyhow, bail};
 use clap::Parser;
 use itertools::Itertools;
 use serde::Deserialize;
@@ -179,12 +179,37 @@ impl Config {
     }
 }
 
+fn check_if_podman_is_installed() -> Result<()> {
+    Command::new("podman")
+        .arg("--version")
+        .status()
+        .context("Podman is not installed")?;
+
+    Ok(())
+}
+
+fn check_if_image_exists(image: &str) -> Result<()> {
+    Command::new("podman")
+        .arg("image")
+        .arg("exists")
+        .arg(image)
+        .status()
+        .context("Podman is not installed")?
+        .success()
+        .ok_or(anyhow!(
+            "Podman LLMC image does not exist, please run llmc --build first"
+        ))
+}
+
 fn run_in_container(
     cli: &Cli,
     config: &Config,
     home: &Path,
     command_and_args: &[&str],
 ) -> Result<()> {
+    check_if_podman_is_installed()?;
+    check_if_image_exists(&config.image)?;
+
     let mut mounts = config.mounts.clone();
     for path in &cli.paths {
         let source = path.canonicalize()?;
@@ -193,6 +218,12 @@ fn run_in_container(
             target: None,
             readonly: false,
         });
+    }
+
+    for mount in &mounts {
+        if !std::fs::exists(&mount.path)? {
+            bail!("Mount point does not exist: {}", mount.path.display());
+        }
     }
 
     let workdir = cli
@@ -230,6 +261,8 @@ fn run_in_container(
 }
 
 fn build_image(config: &Config) -> Result<()> {
+    check_if_podman_is_installed()?;
+
     let mut containerfile = tempfile::Builder::new().tempfile()?;
 
     containerfile.write_all(CONTAINERFILE_SOURCE)?;
@@ -275,9 +308,9 @@ fn load_config(config_arg: Option<&Path>, cwd: &Path, home: &Path) -> Result<Loa
         let local = cwd.join("llmc.toml");
         let home_config = home.join(".config/llmc/config.toml");
 
-        if local.is_file() {
+        if local.try_exists().unwrap_or_default() {
             Some(local)
-        } else if home_config.is_file() {
+        } else if home_config.try_exists().unwrap_or_default() {
             Some(home_config)
         } else {
             None
@@ -328,11 +361,14 @@ fn resolve_path(path: &Path, cwd: &Path) -> Result<PathBuf> {
 fn resolve_config_source(path: &Path, base_dir: &Path, home: &Path) -> Result<PathBuf> {
     let expanded = expand_config_home(path, home);
     if expanded.is_absolute() {
-        expanded.canonicalize().map_err(Into::into)
+        expanded
+            .canonicalize()
+            .with_context(|| format!("failed to canonicalize path {}", expanded.display()))
     } else {
         {
-            let path = base_dir.join(expanded);
-            path.canonicalize().map_err(Into::into)
+            let path = base_dir.join(&expanded);
+            path.canonicalize()
+                .with_context(|| format!("failed to canonicalize path {}", expanded.display()))
         }
     }
 }
